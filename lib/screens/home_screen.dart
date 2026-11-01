@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/materia.dart';
 import '../services/materia_service.dart';
 import 'crear_materia_screen.dart';
+import 'tarjetas_screen.dart';
 
 /// HU006: listado de materias con su total de tarjetas y las pendientes.
 class HomeScreen extends StatefulWidget {
@@ -40,6 +41,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ? 'Materia creada correctamente'
           : 'Materia actualizada correctamente');
     }
+  }
+
+  /// HU011: abre las tarjetas de una materia. Al volver se recarga la lista
+  /// para que los contadores (total y pendientes) queden al día.
+  Future<void> _abrirTarjetas(Materia materia) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => TarjetasScreen(materia: materia)),
+    );
+    if (mounted) _recargar();
   }
 
   void _mostrarMensaje(String texto) {
@@ -139,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: materias.length,
               itemBuilder: (context, i) => _MateriaCard(
                 materia: materias[i],
+                onAbrir: () => _abrirTarjetas(materias[i]),
                 onEditar: () => _abrirFormulario(materia: materias[i]),
                 onEliminar: () => _eliminar(materias[i]),
               ),
@@ -157,11 +169,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _MateriaCard extends StatelessWidget {
   final Materia materia;
+  final VoidCallback onAbrir;
   final VoidCallback onEditar;
   final VoidCallback onEliminar;
 
   const _MateriaCard({
     required this.materia,
+    required this.onAbrir,
     required this.onEditar,
     required this.onEliminar,
   });
@@ -173,55 +187,58 @@ class _MateriaCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 12),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 8, color: materia.colorFlutter),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      materia.nombre,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    if (descripcion != null && descripcion.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(descripcion),
-                    ],
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        Chip(
-                          avatar: const Icon(Icons.style, size: 18),
-                          label: Text('${materia.totalTarjetas} tarjetas'),
-                        ),
-                        Chip(
-                          avatar: const Icon(Icons.schedule, size: 18),
-                          label: Text('${materia.tarjetasPendientes} pendientes'),
-                        ),
+      child: InkWell(
+        onTap: onAbrir,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 8, color: materia.colorFlutter),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        materia.nombre,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (descripcion != null && descripcion.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(descripcion),
                       ],
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Chip(
+                            avatar: const Icon(Icons.style, size: 18),
+                            label: Text('${materia.totalTarjetas} tarjetas'),
+                          ),
+                          Chip(
+                            avatar: const Icon(Icons.schedule, size: 18),
+                            label: Text('${materia.tarjetasPendientes} pendientes'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              onPressed: onEditar,
-              tooltip: 'Editar materia',
-              icon: const Icon(Icons.edit_outlined),
-            ),
-            IconButton(
-              onPressed: onEliminar,
-              tooltip: 'Eliminar materia',
-              icon: const Icon(Icons.delete_outline),
-            ),
-          ],
+              IconButton(
+                onPressed: onEditar,
+                tooltip: 'Editar materia',
+                icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                onPressed: onEliminar,
+                tooltip: 'Eliminar materia',
+                icon: const Icon(Icons.delete_outline),
+              ),
+            ],
+          ),
         ),
       ),
     );
