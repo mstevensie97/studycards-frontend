@@ -41,6 +41,63 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _mostrarMensaje(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  /// HU003, HU004 y HU005: eliminar una materia.
+  Future<void> _eliminar(Materia materia) async {
+    try {
+      // Primer intento, sin confirmar.
+      final advertencia = await _service.eliminarMateria(materia.id);
+
+      if (advertencia == null) {
+        // La materia no tenía tarjetas: se eliminó directamente (HU003).
+        if (!mounted) return;
+        _recargar();
+        _mostrarMensaje('Materia "${materia.nombre}" eliminada');
+        return;
+      }
+
+      // La materia tiene tarjetas: se pide confirmación (HU004).
+      if (!mounted) return;
+      final confirmado = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.warning_amber_rounded, size: 40),
+          title: const Text('¿Eliminar materia?'),
+          content: Text(
+            '"${materia.nombre}" tiene ${advertencia.totalTarjetas} '
+                '${advertencia.totalTarjetas == 1 ? 'tarjeta' : 'tarjetas'}. '
+                'Si continúas, se eliminarán también y no se podrán recuperar.',
+          ),
+          actions: [
+            // HU005: cancelar no borra nada.
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar todo'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmado != true) return; // Canceló: la materia queda intacta.
+
+      await _service.eliminarMateria(materia.id, confirmar: true);
+      if (!mounted) return;
+      _recargar();
+      _mostrarMensaje('Materia "${materia.nombre}" eliminada');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _mostrarMensaje(e.mensaje);
+      _recargar();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,7 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: materias.length,
-              itemBuilder: (context, i) => _MateriaCard(materia: materias[i]),
+              itemBuilder: (context, i) => _MateriaCard(
+                materia: materias[i],
+                onEliminar: () => _eliminar(materias[i]),
+              ),
             ),
           );
         },
@@ -95,8 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _MateriaCard extends StatelessWidget {
   final Materia materia;
+  final VoidCallback onEliminar;
 
-  const _MateriaCard({required this.materia});
+  const _MateriaCard({required this.materia, required this.onEliminar});
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +203,11 @@ class _MateriaCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            IconButton(
+              onPressed: onEliminar,
+              tooltip: 'Eliminar materia',
+              icon: const Icon(Icons.delete_outline),
             ),
           ],
         ),
