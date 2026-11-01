@@ -28,16 +28,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _abrirFormulario() async {
-    final creada = await Navigator.push<bool>(
+  /// Abre el formulario: para crear (sin materia) o para editar (HU002).
+  Future<void> _abrirFormulario({Materia? materia}) async {
+    final guardada = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const CrearMateriaScreen()),
+      MaterialPageRoute(builder: (_) => CrearMateriaScreen(materia: materia)),
     );
-    if (creada == true && mounted) {
+    if (guardada == true && mounted) {
       _recargar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Materia creada correctamente')),
-      );
+      _mostrarMensaje(materia == null
+          ? 'Materia creada correctamente'
+          : 'Materia actualizada correctamente');
     }
   }
 
@@ -138,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: materias.length,
               itemBuilder: (context, i) => _MateriaCard(
                 materia: materias[i],
+                onEditar: () => _abrirFormulario(materia: materias[i]),
                 onEliminar: () => _eliminar(materias[i]),
               ),
             ),
@@ -145,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _abrirFormulario,
+        onPressed: () => _abrirFormulario(),
         tooltip: 'Crear materia',
         child: const Icon(Icons.add),
       ),
@@ -155,9 +157,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _MateriaCard extends StatelessWidget {
   final Materia materia;
+  final VoidCallback onEditar;
   final VoidCallback onEliminar;
 
-  const _MateriaCard({required this.materia, required this.onEliminar});
+  const _MateriaCard({
+    required this.materia,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -203,6 +210,11 @@ class _MateriaCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            IconButton(
+              onPressed: onEditar,
+              tooltip: 'Editar materia',
+              icon: const Icon(Icons.edit_outlined),
             ),
             IconButton(
               onPressed: onEliminar,

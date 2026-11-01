@@ -122,4 +122,43 @@ class MateriaService {
     }
     throw ApiException('Error inesperado (${respuesta.statusCode}).');
   }
+
+  /// HU002: edita una materia. PUT /materias/{id}
+  Future<void> actualizarMateria({
+    required int id,
+    required String nombre,
+    String? descripcion,
+    String? color,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/materias/$id');
+
+    final http.Response respuesta;
+    try {
+      respuesta = await http
+          .put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nombre': nombre,
+          'descripcion': descripcion,
+          'color': color,
+        }),
+      )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw ApiException(_errorConexion);
+    }
+
+    switch (respuesta.statusCode) {
+      case 200:
+        return;
+      case 400:
+        throw ApiException(
+            'Los datos no son válidos. Revisa el nombre (obligatorio) y la longitud de los campos.');
+      case 404:
+        throw ApiException('La materia ya no existe.');
+      default:
+        throw ApiException('Error inesperado (${respuesta.statusCode}).');
+    }
+  }
 }
