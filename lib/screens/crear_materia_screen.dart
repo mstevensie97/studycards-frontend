@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../models/materia.dart';
 import '../services/materia_service.dart';
 
-/// HU001: formulario para crear una materia.
+/// HU001 y HU002: formulario para crear una materia o, si se le pasa una
+/// [materia], para editarla (con los datos ya cargados).
 class CrearMateriaScreen extends StatefulWidget {
-  const CrearMateriaScreen({super.key});
+  final Materia? materia;
+
+  const CrearMateriaScreen({super.key, this.materia});
 
   @override
   State<CrearMateriaScreen> createState() => _CrearMateriaScreenState();
@@ -21,12 +25,38 @@ class _CrearMateriaScreenState extends State<CrearMateriaScreen> {
   };
 
   final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
-  final _descripcionCtrl = TextEditingController();
+  late final TextEditingController _nombreCtrl;
+  late final TextEditingController _descripcionCtrl;
   final _service = MateriaService();
 
   String? _colorSeleccionado;
   bool _guardando = false;
+
+  bool get _editando => widget.materia != null;
+
+  /// Paletas de colores a mostrar. Si la materia que se edita tiene un color
+  /// que no está en la paleta (por ejemplo creada desde Postman), se agrega
+  /// para que no se pierda ni quede sin mostrar.
+  Map<String, Color> get _coloresDisponibles {
+    final mapa = Map<String, Color>.of(_colores);
+    final actual = widget.materia?.color;
+    if (actual != null &&
+        !mapa.containsKey(actual) &&
+        RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(actual)) {
+      mapa[actual] = widget.materia!.colorFlutter;
+    }
+    return mapa;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.materia;
+    _nombreCtrl = TextEditingController(text: m?.nombre ?? '');
+    _descripcionCtrl = TextEditingController(text: m?.descripcion ?? '');
+    final color = m?.color;
+    _colorSeleccionado = (color == null || color.isEmpty) ? null : color;
+  }
 
   @override
   void dispose() {
@@ -40,12 +70,24 @@ class _CrearMateriaScreenState extends State<CrearMateriaScreen> {
 
     setState(() => _guardando = true);
     try {
-      final descripcion = _descripcionCtrl.text.trim();
-      await _service.crearMateria(
-        nombre: _nombreCtrl.text.trim(),
-        descripcion: descripcion.isEmpty ? null : descripcion,
-        color: _colorSeleccionado,
-      );
+      final nombre = _nombreCtrl.text.trim();
+      final descripcionTexto = _descripcionCtrl.text.trim();
+      final descripcion = descripcionTexto.isEmpty ? null : descripcionTexto;
+
+      if (_editando) {
+        await _service.actualizarMateria(
+          id: widget.materia!.id,
+          nombre: nombre,
+          descripcion: descripcion,
+          color: _colorSeleccionado,
+        );
+      } else {
+        await _service.crearMateria(
+          nombre: nombre,
+          descripcion: descripcion,
+          color: _colorSeleccionado,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (mounted) {
@@ -60,7 +102,9 @@ class _CrearMateriaScreenState extends State<CrearMateriaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva materia')),
+      appBar: AppBar(
+        title: Text(_editando ? 'Editar materia' : 'Nueva materia'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -95,7 +139,7 @@ class _CrearMateriaScreenState extends State<CrearMateriaScreen> {
               const SizedBox(height: 8),
               Wrap(
                 spacing: 12,
-                children: _colores.entries.map((e) {
+                children: _coloresDisponibles.entries.map((e) {
                   final seleccionado = _colorSeleccionado == e.key;
                   return GestureDetector(
                     onTap: () => setState(() =>
@@ -121,7 +165,7 @@ class _CrearMateriaScreenState extends State<CrearMateriaScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                      : const Text('Guardar'),
+                      : Text(_editando ? 'Guardar cambios' : 'Guardar'),
                 ),
               ),
             ],
