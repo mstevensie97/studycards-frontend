@@ -103,4 +103,29 @@ class TarjetaService {
         throw ApiException('Error inesperado (${resp.statusCode}).');
     }
   }
+
+  /// HU010: elimina una tarjeta. DELETE /materias/{id}/tarjetas/{tarjetaId}
+  Future<void> eliminarTarjeta({
+    required int materiaId,
+    required int tarjetaId,
+  }) async {
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/materias/$materiaId/tarjetas/$tarjetaId');
+
+    final http.Response resp;
+    try {
+      resp = await http.delete(uri).timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw ApiException(_errorConexion);
+    }
+
+    switch (resp.statusCode) {
+      case 204:
+        return;
+      case 404:
+        throw ApiException('La tarjeta ya no existe.');
+      default:
+        throw ApiException('Error inesperado (${resp.statusCode}).');
+    }
+  }
 }

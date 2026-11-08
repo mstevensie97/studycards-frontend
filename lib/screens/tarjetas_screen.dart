@@ -54,6 +54,51 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
     }
   }
 
+  /// HU010: eliminar una tarjeta, pidiendo confirmación antes.
+  Future<void> _eliminar(Tarjeta tarjeta) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, size: 40),
+        title: const Text('¿Eliminar tarjeta?'),
+        content: Text(
+          '"${tarjeta.pregunta}" se eliminará y no se podrá recuperar.',
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return; // Canceló: no se borra nada.
+
+    try {
+      await _service.eliminarTarjeta(
+        materiaId: widget.materia.id,
+        tarjetaId: tarjeta.id,
+      );
+      if (!mounted) return;
+      _recargar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tarjeta eliminada')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.mensaje)));
+      _recargar();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,6 +153,7 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
                 return _TarjetaCard(
                   tarjeta: tarjeta,
                   onEditar: () => _abrirFormulario(tarjeta: tarjeta),
+                  onEliminar: () => _eliminar(tarjeta),
                 );
               },
             ),
@@ -126,8 +172,13 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
 class _TarjetaCard extends StatelessWidget {
   final Tarjeta tarjeta;
   final VoidCallback onEditar;
+  final VoidCallback onEliminar;
 
-  const _TarjetaCard({required this.tarjeta, required this.onEditar});
+  const _TarjetaCard({
+    required this.tarjeta,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +210,11 @@ class _TarjetaCard extends StatelessWidget {
                   onPressed: onEditar,
                   tooltip: 'Editar tarjeta',
                   icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  onPressed: onEliminar,
+                  tooltip: 'Eliminar tarjeta',
+                  icon: const Icon(Icons.delete_outline),
                 ),
               ],
             ),
