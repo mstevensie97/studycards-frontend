@@ -128,4 +128,39 @@ class TarjetaService {
         throw ApiException('Error inesperado (${resp.statusCode}).');
     }
   }
+
+  /// HU020 y HU021: marca una tarjeta como "APRENDIDA" o "REPASAR".
+  /// PUT /materias/{id}/tarjetas/{tarjetaId}/nivel
+  Future<void> marcarNivel({
+    required int materiaId,
+    required int tarjetaId,
+    required String nivel,
+  }) async {
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/materias/$materiaId/tarjetas/$tarjetaId/nivel');
+
+    final http.Response resp;
+    try {
+      resp = await http
+          .put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'nivelDominio': nivel}),
+      )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw ApiException(_errorConexion);
+    }
+
+    switch (resp.statusCode) {
+      case 200:
+        return;
+      case 400:
+        throw ApiException('El nivel debe ser Aprendida o Repasar.');
+      case 404:
+        throw ApiException('La tarjeta ya no existe.');
+      default:
+        throw ApiException('Error inesperado (${resp.statusCode}).');
+    }
+  }
 }

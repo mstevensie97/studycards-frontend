@@ -55,11 +55,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// HU012: inicia una sesión de estudio de la materia.
-  void _abrirEstudio(Materia materia) {
-    Navigator.push(
+  /// Al volver se recarga la lista: marcar tarjetas cambia los pendientes.
+  Future<void> _abrirEstudio(Materia materia) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EstudioScreen(materia: materia)),
     );
+    if (mounted) _recargar();
   }
 
   void _mostrarMensaje(String texto) {

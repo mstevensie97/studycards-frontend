@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
 import '../models/sesion_estudio.dart';
+import '../models/tarjeta.dart';
 import '../services/estudio_service.dart';
 import '../services/materia_service.dart' show ApiException;
+import '../services/tarjeta_service.dart';
 
 /// HU012: sesión de estudio de una materia.
 /// Muestra las tarjetas una por una: primero solo la pregunta, y la respuesta
@@ -92,6 +94,11 @@ class _SesionViewState extends State<_SesionView> {
   bool _revelada = false;
   bool _terminada = false;
 
+  final _tarjetaService = TarjetaService();
+  // Resultado marcado en esta sesión: id de tarjeta -> "APRENDIDA" o "REPASAR".
+  final Map<int, String> _resultados = {};
+  bool _guardandoNivel = false;
+
   int get _total => widget.sesion.tarjetas.length;
 
   void _anterior() {
@@ -112,13 +119,38 @@ class _SesionViewState extends State<_SesionView> {
     });
   }
 
+  /// HU020 y HU021: marca la tarjeta actual y pasa a la siguiente.
+  Future<void> _marcar(Tarjeta tarjeta, String nivel) async {
+    setState(() => _guardandoNivel = true);
+    try {
+      await _tarjetaService.marcarNivel(
+        materiaId: widget.sesion.materiaId,
+        tarjetaId: tarjeta.id,
+        nivel: nivel,
+      );
+      if (!mounted) return;
+      _resultados[tarjeta.id] = nivel;
+      setState(() => _guardandoNivel = false);
+      _siguiente();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _guardandoNivel = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.mensaje)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_terminada) {
+      final aprendidas =
+          _resultados.values.where((n) => n == 'APRENDIDA').length;
+      final porRepasar = _resultados.values.where((n) => n == 'REPASAR').length;
       return _Mensaje(
         icono: Icons.check_circle_outline,
         mensaje: '¡Sesión completada!\nRepasaste $_total '
-            '${_total == 1 ? 'tarjeta' : 'tarjetas'}.',
+            '${_total == 1 ? 'tarjeta' : 'tarjetas'}.'
+            '${_resultados.isEmpty ? '' : '\nAprendidas: $aprendidas · Por repasar: $porRepasar'}',
         textoBoton: 'Estudiar de nuevo',
         onPressed: widget.onRepetir,
         textoBotonSecundario: 'Volver',
@@ -194,7 +226,39 @@ class _SesionViewState extends State<_SesionView> {
                 : 'Toca la tarjeta para ver la respuesta',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          // HU020 y HU021: solo se puede marcar después de ver la respuesta.
+          // Se reserva el espacio para que la pantalla no salte.
+          Visibility(
+            visible: _revelada,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _guardandoNivel
+                        ? null
+                        : () => _marcar(tarjeta, 'REPASAR'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Repasar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _guardandoNivel
+                        ? null
+                        : () => _marcar(tarjeta, 'APRENDIDA'),
+                    icon: const Icon(Icons.check),
+                    label: const Text('Aprendida'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
