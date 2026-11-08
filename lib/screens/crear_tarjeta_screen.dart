@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
+import '../models/tarjeta.dart';
 import '../services/materia_service.dart' show ApiException;
 import '../services/tarjeta_service.dart';
 
-/// HU008: formulario para crear una tarjeta (pregunta y respuesta)
-/// dentro de una materia.
+/// HU008 y HU009: formulario para crear una tarjeta (pregunta y respuesta)
+/// dentro de una materia o, si se le pasa una [tarjeta], para editarla.
 class CrearTarjetaScreen extends StatefulWidget {
   final Materia materia;
+  final Tarjeta? tarjeta;
 
-  const CrearTarjetaScreen({super.key, required this.materia});
+  const CrearTarjetaScreen({super.key, required this.materia, this.tarjeta});
 
   @override
   State<CrearTarjetaScreen> createState() => _CrearTarjetaScreenState();
@@ -17,11 +19,21 @@ class CrearTarjetaScreen extends StatefulWidget {
 
 class _CrearTarjetaScreenState extends State<CrearTarjetaScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _preguntaCtrl = TextEditingController();
-  final _respuestaCtrl = TextEditingController();
+  late final TextEditingController _preguntaCtrl;
+  late final TextEditingController _respuestaCtrl;
   final _service = TarjetaService();
 
   bool _guardando = false;
+
+  bool get _editando => widget.tarjeta != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _preguntaCtrl = TextEditingController(text: widget.tarjeta?.pregunta ?? '');
+    _respuestaCtrl =
+        TextEditingController(text: widget.tarjeta?.respuesta ?? '');
+  }
 
   @override
   void dispose() {
@@ -35,11 +47,23 @@ class _CrearTarjetaScreenState extends State<CrearTarjetaScreen> {
 
     setState(() => _guardando = true);
     try {
-      await _service.crearTarjeta(
-        materiaId: widget.materia.id,
-        pregunta: _preguntaCtrl.text.trim(),
-        respuesta: _respuestaCtrl.text.trim(),
-      );
+      final pregunta = _preguntaCtrl.text.trim();
+      final respuesta = _respuestaCtrl.text.trim();
+
+      if (_editando) {
+        await _service.actualizarTarjeta(
+          materiaId: widget.materia.id,
+          tarjetaId: widget.tarjeta!.id,
+          pregunta: pregunta,
+          respuesta: respuesta,
+        );
+      } else {
+        await _service.crearTarjeta(
+          materiaId: widget.materia.id,
+          pregunta: pregunta,
+          respuesta: respuesta,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (mounted) {
@@ -54,7 +78,11 @@ class _CrearTarjetaScreenState extends State<CrearTarjetaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Nueva tarjeta · ${widget.materia.nombre}')),
+      appBar: AppBar(
+        title: Text(_editando
+            ? 'Editar tarjeta · ${widget.materia.nombre}'
+            : 'Nueva tarjeta · ${widget.materia.nombre}'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -98,7 +126,7 @@ class _CrearTarjetaScreenState extends State<CrearTarjetaScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                      : const Text('Guardar tarjeta'),
+                      : Text(_editando ? 'Guardar cambios' : 'Guardar tarjeta'),
                 ),
               ),
             ],

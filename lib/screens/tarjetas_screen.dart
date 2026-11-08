@@ -33,17 +33,23 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
     });
   }
 
-  Future<void> _abrirFormulario() async {
-    final creada = await Navigator.push<bool>(
+  /// Abre el formulario: para crear (sin tarjeta) o para editar (HU009).
+  Future<void> _abrirFormulario({Tarjeta? tarjeta}) async {
+    final guardada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => CrearTarjetaScreen(materia: widget.materia),
+        builder: (_) =>
+            CrearTarjetaScreen(materia: widget.materia, tarjeta: tarjeta),
       ),
     );
-    if (creada == true && mounted) {
+    if (guardada == true && mounted) {
       _recargar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tarjeta creada correctamente')),
+        SnackBar(
+          content: Text(tarjeta == null
+              ? 'Tarjeta creada correctamente'
+              : 'Tarjeta actualizada correctamente'),
+        ),
       );
     }
   }
@@ -98,14 +104,18 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
                     ),
                   );
                 }
-                return _TarjetaCard(tarjeta: listado.tarjetas[i - 1]);
+                final tarjeta = listado.tarjetas[i - 1];
+                return _TarjetaCard(
+                  tarjeta: tarjeta,
+                  onEditar: () => _abrirFormulario(tarjeta: tarjeta),
+                );
               },
             ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _abrirFormulario,
+        onPressed: () => _abrirFormulario(),
         tooltip: 'Crear tarjeta',
         child: const Icon(Icons.add),
       ),
@@ -115,8 +125,9 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
 
 class _TarjetaCard extends StatelessWidget {
   final Tarjeta tarjeta;
+  final VoidCallback onEditar;
 
-  const _TarjetaCard({required this.tarjeta});
+  const _TarjetaCard({required this.tarjeta, required this.onEditar});
 
   @override
   Widget build(BuildContext context) {
@@ -133,12 +144,23 @@ class _TarjetaCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(tarjeta.respuesta),
             const SizedBox(height: 12),
-            Chip(
-              avatar: Icon(
-                tarjeta.estaAprendida ? Icons.check_circle : Icons.schedule,
-                size: 18,
-              ),
-              label: Text(tarjeta.estaAprendida ? 'Aprendida' : 'Por repasar'),
+            Row(
+              children: [
+                Chip(
+                  avatar: Icon(
+                    tarjeta.estaAprendida ? Icons.check_circle : Icons.schedule,
+                    size: 18,
+                  ),
+                  label:
+                  Text(tarjeta.estaAprendida ? 'Aprendida' : 'Por repasar'),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: onEditar,
+                  tooltip: 'Editar tarjeta',
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+              ],
             ),
           ],
         ),

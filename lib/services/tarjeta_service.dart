@@ -66,4 +66,41 @@ class TarjetaService {
         throw ApiException('Error inesperado (${resp.statusCode}).');
     }
   }
+
+  /// HU009: edita la pregunta y la respuesta de una tarjeta.
+  /// PUT /materias/{id}/tarjetas/{tarjetaId}
+  Future<void> actualizarTarjeta({
+    required int materiaId,
+    required int tarjetaId,
+    required String pregunta,
+    required String respuesta,
+  }) async {
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/materias/$materiaId/tarjetas/$tarjetaId');
+
+    final http.Response resp;
+    try {
+      resp = await http
+          .put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pregunta': pregunta, 'respuesta': respuesta}),
+      )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw ApiException(_errorConexion);
+    }
+
+    switch (resp.statusCode) {
+      case 200:
+        return;
+      case 400:
+        throw ApiException(
+            'Datos no válidos. La pregunta (máx. 500 caracteres) y la respuesta (máx. 1000) son obligatorias.');
+      case 404:
+        throw ApiException('La tarjeta ya no existe.');
+      default:
+        throw ApiException('Error inesperado (${resp.statusCode}).');
+    }
+  }
 }
