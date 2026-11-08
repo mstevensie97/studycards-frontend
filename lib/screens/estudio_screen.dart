@@ -133,6 +133,8 @@ class _SesionViewState extends State<_SesionView> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          _AvisoModo(sesion: widget.sesion),
+          const SizedBox(height: 12),
           Text('${_indice + 1} de $_total',
               style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
@@ -209,6 +211,40 @@ class _SesionViewState extends State<_SesionView> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// HU013: avisa qué tarjetas se están estudiando (vencidas o toda la materia).
+class _AvisoModo extends StatelessWidget {
+  final SesionEstudio sesion;
+
+  const _AvisoModo({required this.sesion});
+
+  @override
+  Widget build(BuildContext context) {
+    final vencidas = sesion.esDeVencidas;
+    final total = sesion.tarjetas.length;
+    final texto = vencidas
+        ? 'Repasando $total ${total == 1 ? 'tarjeta vencida' : 'tarjetas vencidas'}'
+        : 'No tienes tarjetas vencidas. Estudiando toda la materia en orden aleatorio';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(vencidas ? Icons.schedule : Icons.shuffle, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(texto, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),
