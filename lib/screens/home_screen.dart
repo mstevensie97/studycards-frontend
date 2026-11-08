@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/materia.dart';
 import '../services/materia_service.dart';
 import 'crear_materia_screen.dart';
+import 'estudio_screen.dart';
 import 'tarjetas_screen.dart';
 
 /// HU006: listado de materias con su total de tarjetas y las pendientes.
@@ -51,6 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => TarjetasScreen(materia: materia)),
     );
     if (mounted) _recargar();
+  }
+
+  /// HU012: inicia una sesión de estudio de la materia.
+  void _abrirEstudio(Materia materia) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EstudioScreen(materia: materia)),
+    );
   }
 
   void _mostrarMensaje(String texto) {
@@ -151,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, i) => _MateriaCard(
                 materia: materias[i],
                 onAbrir: () => _abrirTarjetas(materias[i]),
+                onEstudiar: () => _abrirEstudio(materias[i]),
                 onEditar: () => _abrirFormulario(materia: materias[i]),
                 onEliminar: () => _eliminar(materias[i]),
               ),
@@ -170,12 +180,14 @@ class _HomeScreenState extends State<HomeScreen> {
 class _MateriaCard extends StatelessWidget {
   final Materia materia;
   final VoidCallback onAbrir;
+  final VoidCallback onEstudiar;
   final VoidCallback onEditar;
   final VoidCallback onEliminar;
 
   const _MateriaCard({
     required this.materia,
     required this.onAbrir,
+    required this.onEstudiar,
     required this.onEditar,
     required this.onEliminar,
   });
@@ -222,6 +234,12 @@ class _MateriaCard extends StatelessWidget {
                             label: Text('${materia.tarjetasPendientes} pendientes'),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: onEstudiar,
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Estudiar'),
                       ),
                     ],
                   ),
