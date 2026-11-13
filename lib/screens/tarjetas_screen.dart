@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
+import '../models/progreso.dart';
 import '../models/tarjeta.dart';
 import '../services/materia_service.dart' show ApiException;
+import '../services/progreso_service.dart';
 import '../services/tarjeta_service.dart';
 import 'crear_tarjeta_screen.dart';
 
@@ -19,17 +21,21 @@ class TarjetasScreen extends StatefulWidget {
 
 class _TarjetasScreenState extends State<TarjetasScreen> {
   final _service = TarjetaService();
+  final _progresoService = ProgresoService();
   late Future<ListadoTarjetas> _listado;
+  late Future<Progreso> _progreso;
 
   @override
   void initState() {
     super.initState();
     _listado = _service.listarTarjetas(widget.materia.id);
+    _progreso = _progresoService.consultar(widget.materia.id);
   }
 
   void _recargar() {
     setState(() {
       _listado = _service.listarTarjetas(widget.materia.id);
+      _progreso = _progresoService.consultar(widget.materia.id);
     });
   }
 
@@ -141,12 +147,9 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
               itemCount: listado.tarjetas.length + 1,
               itemBuilder: (context, i) {
                 if (i == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 8),
-                    child: Text(
-                      '${listado.total} ${listado.total == 1 ? 'tarjeta' : 'tarjetas'}',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
+                  return _ProgresoCard(
+                    total: listado.total,
+                    progreso: _progreso,
                   );
                 }
                 final tarjeta = listado.tarjetas[i - 1];
@@ -164,6 +167,90 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
         onPressed: () => _abrirFormulario(),
         tooltip: 'Crear tarjeta',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+/// RQ-15: progreso de estudio de la materia (tarjetas estudiadas y
+/// porcentaje marcado como "Aprendida"). Si no se puede cargar, solo se
+/// muestra el total de tarjetas.
+class _ProgresoCard extends StatelessWidget {
+  final int total;
+  final Future<Progreso> progreso;
+
+  const _ProgresoCard({required this.total, required this.progreso});
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = Theme.of(context).textTheme;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FutureBuilder<Progreso>(
+          future: progreso,
+          builder: (context, snapshot) {
+            final resumen = Text(
+              '$total ${total == 1 ? 'tarjeta' : 'tarjetas'}',
+              style: texto.titleSmall,
+            );
+
+            if (snapshot.connectionState != ConnectionState.done) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  resumen,
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ],
+              );
+            }
+
+            final p = snapshot.data;
+            if (snapshot.hasError || p == null) return resumen;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text('Tu progreso', style: texto.titleMedium)),
+                    Text(
+                      '${p.porcentajeAprendidas}%',
+                      style: texto.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: p.porcentajeAprendidas / 100,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Chip(
+                      avatar: const Icon(Icons.check_circle, size: 18),
+                      label: Text('Aprendidas: ${p.aprendidas} de ${p.totalTarjetas}'),
+                    ),
+                    Chip(
+                      avatar: const Icon(Icons.school_outlined, size: 18),
+                      label: Text('Estudiadas: ${p.estudiadas} de ${p.totalTarjetas}'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
