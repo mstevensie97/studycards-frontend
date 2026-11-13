@@ -135,6 +135,7 @@ class TarjetaService {
     required int materiaId,
     required int tarjetaId,
     required String nivel,
+    int? tiempoSegundos,
   }) async {
     final uri = Uri.parse(
         '${ApiConfig.baseUrl}/materias/$materiaId/tarjetas/$tarjetaId/nivel');
@@ -145,7 +146,11 @@ class TarjetaService {
           .put(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'nivelDominio': nivel}),
+        body: jsonEncode({
+          'nivelDominio': nivel,
+          // RQ-16: segundos que tardó en responder (para el historial).
+          'tiempoSegundos': tiempoSegundos,
+        }),
       )
           .timeout(const Duration(seconds: 10));
     } catch (_) {

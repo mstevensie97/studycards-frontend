@@ -99,12 +99,16 @@ class _SesionViewState extends State<_SesionView> {
   final Map<int, String> _resultados = {};
   bool _guardandoNivel = false;
 
+  // RQ-16: momento en que apareció la tarjeta actual, para medir el tiempo.
+  DateTime _inicioTarjeta = DateTime.now();
+
   int get _total => widget.sesion.tarjetas.length;
 
   void _anterior() {
     setState(() {
       _indice--;
       _revelada = false;
+      _inicioTarjeta = DateTime.now();
     });
   }
 
@@ -113,6 +117,7 @@ class _SesionViewState extends State<_SesionView> {
       if (_indice < _total - 1) {
         _indice++;
         _revelada = false;
+        _inicioTarjeta = DateTime.now();
       } else {
         _terminada = true;
       }
@@ -121,12 +126,14 @@ class _SesionViewState extends State<_SesionView> {
 
   /// HU020 y HU021: marca la tarjeta actual y pasa a la siguiente.
   Future<void> _marcar(Tarjeta tarjeta, String nivel) async {
+    final segundos = DateTime.now().difference(_inicioTarjeta).inSeconds;
     setState(() => _guardandoNivel = true);
     try {
       await _tarjetaService.marcarNivel(
         materiaId: widget.sesion.materiaId,
         tarjetaId: tarjeta.id,
         nivel: nivel,
+        tiempoSegundos: segundos,
       );
       if (!mounted) return;
       _resultados[tarjeta.id] = nivel;
