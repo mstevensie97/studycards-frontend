@@ -146,15 +146,12 @@ class _SesionViewState extends State<_SesionView> {
       final aprendidas =
           _resultados.values.where((n) => n == 'APRENDIDA').length;
       final porRepasar = _resultados.values.where((n) => n == 'REPASAR').length;
-      return _Mensaje(
-        icono: Icons.check_circle_outline,
-        mensaje: '¡Sesión completada!\nRepasaste $_total '
-            '${_total == 1 ? 'tarjeta' : 'tarjetas'}.'
-            '${_resultados.isEmpty ? '' : '\nAprendidas: $aprendidas · Por repasar: $porRepasar'}',
-        textoBoton: 'Estudiar de nuevo',
-        onPressed: widget.onRepetir,
-        textoBotonSecundario: 'Volver',
-        onPressedSecundario: () => Navigator.pop(context),
+      return _ResumenSesion(
+        total: _total,
+        aprendidas: aprendidas,
+        porRepasar: porRepasar,
+        onRepetir: widget.onRepetir,
+        onVolver: () => Navigator.pop(context),
       );
     }
 
@@ -311,6 +308,105 @@ class _AvisoModo extends StatelessWidget {
             child: Text(texto, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// RQ-14: resumen al terminar la sesión, con el porcentaje de aciertos y el
+/// número de tarjetas correctas sobre el total repasado.
+/// Acierto = tarjeta marcada como "Aprendida". Total repasado = tarjetas
+/// marcadas en la sesión (las que se saltaron sin marcar no cuentan).
+class _ResumenSesion extends StatelessWidget {
+  final int total;
+  final int aprendidas;
+  final int porRepasar;
+  final VoidCallback onRepetir;
+  final VoidCallback onVolver;
+
+  const _ResumenSesion({
+    required this.total,
+    required this.aprendidas,
+    required this.porRepasar,
+    required this.onRepetir,
+    required this.onVolver,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = Theme.of(context).textTheme;
+    final color = Theme.of(context).colorScheme;
+    final marcadas = aprendidas + porRepasar;
+    final sinMarcar = total - marcadas;
+    final porcentaje = marcadas == 0 ? 0 : (aprendidas * 100 / marcadas).round();
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.emoji_events_outlined, size: 64, color: color.primary),
+            const SizedBox(height: 12),
+            Text('¡Sesión completada!', style: texto.headlineSmall),
+            const SizedBox(height: 24),
+            if (marcadas == 0)
+              const Text(
+                'No marcaste ninguna tarjeta, así que no hay porcentaje de aciertos.',
+                textAlign: TextAlign.center,
+              )
+            else ...[
+              Text(
+                '$porcentaje%',
+                style: texto.displayMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color.primary,
+                ),
+              ),
+              Text('de aciertos', style: texto.titleMedium),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: 260,
+                child: LinearProgressIndicator(
+                  value: aprendidas / marcadas,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '$aprendidas de $marcadas '
+                    '${marcadas == 1 ? 'tarjeta correcta' : 'tarjetas correctas'}',
+                style: texto.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                alignment: WrapAlignment.center,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.check_circle, size: 18),
+                    label: Text('Aprendidas: $aprendidas'),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.refresh, size: 18),
+                    label: Text('Por repasar: $porRepasar'),
+                  ),
+                  if (sinMarcar > 0)
+                    Chip(
+                      avatar: const Icon(Icons.remove_circle_outline, size: 18),
+                      label: Text('Sin marcar: $sinMarcar'),
+                    ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
+            FilledButton(onPressed: onRepetir, child: const Text('Estudiar de nuevo')),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onVolver, child: const Text('Volver')),
+          ],
+        ),
       ),
     );
   }
