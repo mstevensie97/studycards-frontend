@@ -8,6 +8,7 @@ import '../models/tarjeta.dart';
 import '../services/estudio_service.dart';
 import '../services/materia_service.dart' show ApiException;
 import '../services/tarjeta_service.dart';
+import '../theme/app_colors.dart';
 
 /// HU012: sesión de estudio de una materia.
 /// Muestra las tarjetas una por una: primero solo la pregunta, y la respuesta
@@ -242,6 +243,10 @@ class _SesionViewState extends State<_SesionView> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.repasar,
+                      side: const BorderSide(color: AppColors.repasar),
+                    ),
                     onPressed: _guardandoNivel
                         ? null
                         : () => _marcar(tarjeta, 'REPASAR'),
@@ -252,6 +257,10 @@ class _SesionViewState extends State<_SesionView> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.aprendida,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: _guardandoNivel
                         ? null
                         : () => _marcar(tarjeta, 'APRENDIDA'),

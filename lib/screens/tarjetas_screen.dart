@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
@@ -6,6 +8,7 @@ import '../models/tarjeta.dart';
 import '../services/materia_service.dart' show ApiException;
 import '../services/progreso_service.dart';
 import '../services/tarjeta_service.dart';
+import '../theme/app_colors.dart';
 import 'crear_tarjeta_screen.dart';
 
 /// HU011: listado de las tarjetas de una materia.
@@ -25,6 +28,11 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
   late Future<ListadoTarjetas> _listado;
   late Future<Progreso> _progreso;
 
+  // RQ-13: texto de búsqueda (se espera un momento tras dejar de escribir).
+  final _busquedaController = TextEditingController();
+  Timer? _espera;
+  String _busqueda = '';
+
   @override
   void initState() {
     super.initState();
@@ -32,11 +40,35 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
     _progreso = _progresoService.consultar(widget.materia.id);
   }
 
+  @override
+  void dispose() {
+    _espera?.cancel();
+    _busquedaController.dispose();
+    super.dispose();
+  }
+
   void _recargar() {
     setState(() {
-      _listado = _service.listarTarjetas(widget.materia.id);
+      _listado =
+          _service.listarTarjetas(widget.materia.id, busqueda: _busqueda);
       _progreso = _progresoService.consultar(widget.materia.id);
     });
+  }
+
+  void _alEscribir(String texto) {
+    _espera?.cancel();
+    _espera = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _busqueda = texto.trim();
+      _recargar();
+    });
+  }
+
+  void _limpiarBusqueda() {
+    _espera?.cancel();
+    _busquedaController.clear();
+    _busqueda = '';
+    _recargar();
   }
 
   /// Abre el formulario: para crear (sin tarjeta) o para editar (HU009).
@@ -109,65 +141,104 @@ class _TarjetasScreenState extends State<TarjetasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.materia.nombre)),
-      body: FutureBuilder<ListadoTarjetas>(
-        future: _listado,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return _Mensaje(
-              icono: Icons.cloud_off,
-              mensaje: snapshot.error is ApiException
-                  ? (snapshot.error as ApiException).mensaje
-                  : 'Ocurrió un error al cargar las tarjetas.',
-              textoBoton: 'Reintentar',
-              onPressed: _recargar,
-            );
-          }
-
-          final listado = snapshot.data!;
-          if (listado.tarjetas.isEmpty) {
-            return const _Mensaje(
-              icono: Icons.style_outlined,
-              mensaje:
-              'Esta materia aún no tiene tarjetas.\nUsa el botón + para crear la primera.',
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              _recargar();
-              await _listado;
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              // +1 por el encabezado con el total
-              itemCount: listado.tarjetas.length + 1,
-              itemBuilder: (context, i) {
-                if (i == 0) {
-                  return _ProgresoCard(
-                    total: listado.total,
-                    progreso: _progreso,
-                  );
-                }
-                final tarjeta = listado.tarjetas[i - 1];
-                return _TarjetaCard(
-                  tarjeta: tarjeta,
-                  onEditar: () => _abrirFormulario(tarjeta: tarjeta),
-                  onEliminar: () => _eliminar(tarjeta),
-                );
-              },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: TextField(
+              controller: _busquedaController,
+              onChanged: _alEscribir,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Buscar en las tarjetas...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _busquedaController.text.isEmpty
+                    ? null
+                    : IconButton(
+                  tooltip: 'Limpiar búsqueda',
+                  icon: const Icon(Icons.close),
+                  onPressed: _limpiarBusqueda,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
             ),
-          );
-        },
+          ),
+          Expanded(child: _contenido()),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _abrirFormulario(),
         tooltip: 'Crear tarjeta',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _contenido() {
+    return FutureBuilder<ListadoTarjetas>(
+      future: _listado,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return _Mensaje(
+            icono: Icons.cloud_off,
+            mensaje: snapshot.error is ApiException
+                ? (snapshot.error as ApiException).mensaje
+                : 'Ocurrió un error al cargar las tarjetas.',
+            textoBoton: 'Reintentar',
+            onPressed: _recargar,
+          );
+        }
+
+        final listado = snapshot.data!;
+        if (listado.tarjetas.isEmpty && _busqueda.isNotEmpty) {
+          return _Mensaje(
+            icono: Icons.search_off,
+            mensaje: 'No hay tarjetas que coincidan con "$_busqueda".',
+            textoBoton: 'Limpiar búsqueda',
+            onPressed: _limpiarBusqueda,
+          );
+        }
+        if (listado.tarjetas.isEmpty) {
+          return const _Mensaje(
+            icono: Icons.style_outlined,
+            mensaje:
+            'Esta materia aún no tiene tarjetas.\nUsa el botón + para crear la primera.',
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            _recargar();
+            await _listado;
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(12),
+            // +1 por el encabezado con el total
+            itemCount: listado.tarjetas.length + 1,
+            itemBuilder: (context, i) {
+              if (i == 0) {
+                return _ProgresoCard(
+                  total: listado.total,
+                  progreso: _progreso,
+                );
+              }
+              final tarjeta = listado.tarjetas[i - 1];
+              return _TarjetaCard(
+                tarjeta: tarjeta,
+                onEditar: () => _abrirFormulario(tarjeta: tarjeta),
+                onEliminar: () => _eliminar(tarjeta),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -221,7 +292,7 @@ class _ProgresoCard extends StatelessWidget {
                       '${p.porcentajeAprendidas}%',
                       style: texto.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: AppColors.aprendida,
                       ),
                     ),
                   ],
@@ -229,6 +300,8 @@ class _ProgresoCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: p.porcentajeAprendidas / 100,
+                  color: AppColors.aprendida,
+                  backgroundColor: AppColors.aprendidaFondo,
                   minHeight: 8,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -238,8 +311,14 @@ class _ProgresoCard extends StatelessWidget {
                   runSpacing: 4,
                   children: [
                     Chip(
-                      avatar: const Icon(Icons.check_circle, size: 18),
-                      label: Text('Aprendidas: ${p.aprendidas} de ${p.totalTarjetas}'),
+                      backgroundColor: AppColors.aprendidaFondo,
+                      side: BorderSide.none,
+                      avatar: const Icon(Icons.check_circle,
+                          size: 18, color: AppColors.aprendida),
+                      label: Text(
+                        'Aprendidas: ${p.aprendidas} de ${p.totalTarjetas}',
+                        style: const TextStyle(color: AppColors.aprendida),
+                      ),
                     ),
                     Chip(
                       avatar: const Icon(Icons.school_outlined, size: 18),
@@ -285,12 +364,26 @@ class _TarjetaCard extends StatelessWidget {
             Row(
               children: [
                 Chip(
+                  backgroundColor: tarjeta.estaAprendida
+                      ? AppColors.aprendidaFondo
+                      : AppColors.repasarFondo,
+                  side: BorderSide.none,
                   avatar: Icon(
                     tarjeta.estaAprendida ? Icons.check_circle : Icons.schedule,
                     size: 18,
+                    color: tarjeta.estaAprendida
+                        ? AppColors.aprendida
+                        : AppColors.repasar,
                   ),
-                  label:
-                  Text(tarjeta.estaAprendida ? 'Aprendida' : 'Por repasar'),
+                  label: Text(
+                    tarjeta.estaAprendida ? 'Aprendida' : 'Por repasar',
+                    style: TextStyle(
+                      color: tarjeta.estaAprendida
+                          ? AppColors.aprendida
+                          : AppColors.repasar,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 IconButton(

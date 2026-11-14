@@ -11,8 +11,14 @@ class TarjetaService {
       'No se pudo conectar con el servidor. Verifica que el backend esté encendido.';
 
   /// HU011: lista las tarjetas de una materia. GET /materias/{id}/tarjetas
-  Future<ListadoTarjetas> listarTarjetas(int materiaId) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/materias/$materiaId/tarjetas');
+  /// RQ-13: si se envía [busqueda], solo trae las tarjetas cuya pregunta o
+  /// respuesta contienen ese texto (GET .../tarjetas?q=texto).
+  Future<ListadoTarjetas> listarTarjetas(int materiaId,
+      {String busqueda = ''}) async {
+    var uri = Uri.parse('${ApiConfig.baseUrl}/materias/$materiaId/tarjetas');
+    if (busqueda.trim().isNotEmpty) {
+      uri = uri.replace(queryParameters: {'q': busqueda.trim()});
+    }
 
     final http.Response respuesta;
     try {
