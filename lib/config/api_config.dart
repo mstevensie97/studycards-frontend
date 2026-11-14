@@ -11,4 +11,8 @@ class ApiConfig {
     'API_URL',
     defaultValue: 'https://studycards-backend.onrender.com',
   );
+
+  /// Tiempo máximo de espera por petición. Render (plan gratis) duerme el
+  /// servidor tras 15 min sin uso y despertarlo puede tardar cerca de un minuto.
+  static const Duration timeout = Duration(seconds: 60);
 }

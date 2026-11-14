@@ -22,7 +22,7 @@ class TarjetaService {
 
     final http.Response respuesta;
     try {
-      respuesta = await http.get(uri).timeout(const Duration(seconds: 10));
+      respuesta = await http.get(uri).timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -55,7 +55,7 @@ class TarjetaService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'pregunta': pregunta, 'respuesta': respuesta}),
       )
-          .timeout(const Duration(seconds: 10));
+          .timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -92,7 +92,7 @@ class TarjetaService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'pregunta': pregunta, 'respuesta': respuesta}),
       )
-          .timeout(const Duration(seconds: 10));
+          .timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -120,7 +120,7 @@ class TarjetaService {
 
     final http.Response resp;
     try {
-      resp = await http.delete(uri).timeout(const Duration(seconds: 10));
+      resp = await http.delete(uri).timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -158,7 +158,7 @@ class TarjetaService {
           'tiempoSegundos': tiempoSegundos,
         }),
       )
-          .timeout(const Duration(seconds: 10));
+          .timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
