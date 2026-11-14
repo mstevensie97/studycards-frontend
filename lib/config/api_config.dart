@@ -1,11 +1,14 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 /// Dirección base del backend.
-/// - En Chrome (web) el backend local se alcanza con localhost.
-/// - En el emulador de Android, localhost es el propio emulador,
-///   y 10.0.2.2 es el computador donde corre Quarkus.
-/// Cuando despleguemos en Render, aquí se cambia por la URL pública.
+///
+/// Por defecto la app usa el backend desplegado en Render, así el APK
+/// funciona en cualquier celular con internet.
+///
+/// Para probar contra el backend local (Quarkus en tu computador) se puede
+/// sobreescribir al ejecutar:
+///   flutter run -d chrome --dart-define=API_URL=http://localhost:8080
 class ApiConfig {
-  static String get baseUrl =>
-      kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://studycards-backend.onrender.com',
+  );
 }
