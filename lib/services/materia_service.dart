@@ -35,7 +35,7 @@ class MateriaService {
 
     final http.Response respuesta;
     try {
-      respuesta = await http.get(uri).timeout(const Duration(seconds: 10));
+      respuesta = await http.get(uri).timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -66,7 +66,7 @@ class MateriaService {
 
     final http.Response respuesta;
     try {
-      respuesta = await http.delete(uri).timeout(const Duration(seconds: 10));
+      respuesta = await http.delete(uri).timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -109,7 +109,7 @@ class MateriaService {
           'color': color,
         }),
       )
-          .timeout(const Duration(seconds: 10));
+          .timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
@@ -144,7 +144,7 @@ class MateriaService {
           'color': color,
         }),
       )
-          .timeout(const Duration(seconds: 10));
+          .timeout(ApiConfig.timeout);
     } catch (_) {
       throw ApiException(_errorConexion);
     }
